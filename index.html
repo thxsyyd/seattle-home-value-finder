@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seattle Home Value Finder</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;display:flex;flex-direction:column;height:100vh;background:#1B3A4B}
+#hdr{background:#1B3A4B;color:white;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#hdr h1{font-size:18px;font-weight:600}
+#hdr span{font-size:11px;color:inherit;font-weight:600}
+#main{display:flex;flex:1;overflow:hidden}
+#fp{width:280px;background:#f8fafc;border-right:1px solid #e2e8f0;padding:14px;overflow-y:auto;flex-shrink:0}
+#fp h3{font-size:13px;color:#1B3A4B;margin:0 0 10px}
+.fg{margin-bottom:10px}
+.fg label{display:block;font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.fg select{width:100%;padding:6px 7px;border:1px solid #cbd5e1;border-radius:5px;font-size:12px;background:white}
+.fg input[type=range]{width:100%;padding:0}
+.fg .rv{font-size:12px;color:#065A82;font-weight:600;text-align:center;margin-top:1px}
+.btn{display:block;width:100%;padding:8px;border:none;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px}
+.bp{background:#065A82;color:white}.bp:hover{background:#054a6b}
+.bo{background:white;color:#065A82;border:1px solid #065A82}.bo:hover{background:#f0f7fa}
+.btn.pending{background:#C2410C;box-shadow:0 0 0 3px rgba(194,65,12,.18)}
+.btn.pending:after{content:" \2022"}
+.tog{display:flex;gap:6px;margin-bottom:12px}
+.tb{flex:1;padding:6px 3px;border:1px solid #cbd5e1;border-radius:5px;font-size:10px;background:white;cursor:pointer;text-align:center;color:#64748B;transition:.15s}
+.tb.ac{background:#065A82;color:white;border-color:#065A82}
+.sb{background:white;border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin-bottom:8px}
+.sb .sn{font-size:20px;font-weight:700;color:#065A82}
+.sb .sl{font-size:9px;color:#94a3b8;text-transform:uppercase}
+.di{background:#ecfdf5;border:1px solid #bbf7d0;border-radius:6px;padding:10px;margin-bottom:12px;font-size:11px;color:#065f46;line-height:1.5;display:none}
+.di b{color:#059669}
+hr.dv{border:none;border-top:1px solid #e2e8f0;margin:12px 0}
+.zsb{position:relative;margin-bottom:12px}
+.zsb input{width:100%;padding:8px 10px 8px 32px;border:2px solid #065A82;border-radius:6px;font-size:13px;outline:none}
+.zsb input:focus{border-color:#00A7E1;box-shadow:0 0 0 3px rgba(0,167,225,.15)}
+.zsb .ic{position:absolute;left:10px;top:9px;font-size:14px;color:#065A82}
+.zdd{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #e2e8f0;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:1000;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.zdd .zi{padding:8px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between}
+.zdd .zi:hover{background:#f0f7fa}
+.zdd .zi .zn{font-weight:600;color:#1B3A4B}
+.zdd .zi .zp{color:#64748B;font-size:11px}
+.zc{background:#065A82;border-radius:6px;padding:10px;margin-bottom:12px;color:white;display:none}
+.zc .zt{font-size:14px;font-weight:700;margin-bottom:6px}
+.zc .zs{font-size:11px;margin:2px 0;color:#b0d4e8}
+.zc .zs b{color:white}
+.zc .zx{float:right;cursor:pointer;font-size:16px;color:#b0d4e8;line-height:1}.zc .zx:hover{color:white}
+.sw-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sw-row span{font-size:11px;color:#64748B;flex:1}
+.sw{width:38px;height:20px;border-radius:10px;cursor:pointer;position:relative;transition:.3s}
+.sw .dot{width:16px;height:16px;background:white;border-radius:50%;position:absolute;top:2px;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+#map{flex:1}
+#rp{width:320px;background:white;border-left:1px solid #e2e8f0;display:flex;flex-direction:column;flex-shrink:0}
+#rh{padding:10px 12px;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+#rh h3{font-size:12px;color:#1B3A4B;margin:0}
+#rh .ct{font-size:10px;color:#64748B}
+#rh select{margin-top:5px;padding:4px;border:1px solid #cbd5e1;border-radius:4px;font-size:10px;width:100%}
+#hl{flex:1;overflow-y:auto}
+.hc{padding:9px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .12s}
+.hc:hover{background:#f0f7fa}
+.hc.sel{background:#dbeafe;border-left:3px solid #065A82}
+.hc .hp{font-size:15px;font-weight:700;color:#1B3A4B}
+.hc .hd{font-size:11px;color:#059669;font-weight:600}
+.hc .ht{font-size:10px;color:#64748B;margin-top:1px}
+.hc .hz{font-size:9px;color:#94a3b8}
+.prow{display:flex;align-items:center;gap:6px}
+.prow input{flex:1;min-width:0;padding:6px 7px;border:1px solid #cbd5e1;border-radius:4px;font:inherit;font-size:12px;color:#1B3A4B;background:#fff}
+.prow input:focus{outline:2px solid #065A82;outline-offset:-1px;border-color:#065A82}
+.prow>span{color:#94a3b8;font-size:12px}
+.pin{position:relative;flex:1;min-width:0;display:flex}
+.pin b{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-weight:400;color:#94a3b8;font-size:12px;pointer-events:none}
+.pin input{padding-left:18px}
+.phist{display:flex;align-items:flex-end;gap:1px;height:26px;margin:2px 0 3px}
+.phist i{flex:1;background:#cbd5e1;border-radius:1px 1px 0 0;min-height:1px;transition:background .12s}
+.phist i.on{background:#065A82}
+.fsub{font-size:10px;font-weight:600;color:#94a3b8;letter-spacing:.04em;text-transform:uppercase;margin:2px 0 7px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;align-items:start}
+.fgrid .fg{margin-bottom:6px}
+.fgrid .fg.wide{grid-column:1/-1}
+.btnrow{display:flex;gap:8px;margin-bottom:6px}
+.btnrow .btn{margin-bottom:0}
+.fg input[type=range]+input[type=range]{margin-top:5px}
+.fcount{font-size:11px;color:#64748B;margin:4px 0 10px}
+.fcount b{color:#1B3A4B;font-size:14px}
+#rh .rnum{font-size:26px;font-weight:700;color:#1B3A4B;line-height:1.05}
+#rh .rlab{font-size:12px;font-weight:600;color:#1B3A4B}
+#rh .rsub{font-size:10px;color:#64748B;margin-top:4px;line-height:1.45}
+.lgs{color:#64748B;margin:0 0 4px;max-width:170px;line-height:13px}
+.helpbtn{background:#fff;width:30px;height:30px;border-radius:4px;box-shadow:0 1px 5px rgba(0,0,0,.4);font-size:17px;font-weight:700;color:#065A82;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.helpbtn:hover{background:#f0f7fa}
+#ov{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(15,23,42,.45);z-index:1200;align-items:center;justify-content:center;padding:20px}
+#ov.on{display:flex}
+#ab{background:#fff;border-radius:8px;max-width:560px;max-height:82vh;overflow:auto;padding:22px 26px;position:relative;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+#ab h2{margin:0 0 6px;font-size:18px;color:#1B3A4B}
+#ab h3{margin:18px 0 5px;font-size:13px;color:#1B3A4B}
+#ab p{margin:0;font-size:12px;line-height:1.65;color:#334155}
+#ab .abf{margin-top:20px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:11px;color:#64748B}
+#abx{position:absolute;top:8px;right:12px;background:none;border:0;font-size:24px;line-height:1;color:#64748B;cursor:pointer}
+#abx:hover{color:#1B3A4B}
+.legend{background:white;padding:8px 12px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.15);font-size:10px;line-height:16px}
+.legend h4{margin:0 0 4px;font-size:11px;color:#1B3A4B}
+.legend i{width:12px;height:12px;display:inline-block;margin-right:4px;border-radius:2px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="hdr"><h1>Seattle Home Value Finder</h1><span>King County Housing Data (2014-2015) &middot; INFO 5002 &middot; Haoxuan Tang</span></div>
+<div id="main">
+<div id="fp">
+  <h3>Search Zipcode</h3>
+  <div class="zsb"><span class="ic">&#128269;</span><input type="text" id="zi" placeholder="Type zipcode (e.g. 98023)" autocomplete="off"><div class="zdd" id="zdd"></div></div>
+  <div class="zc" id="zcard"><span class="zx" onclick="clearZip()">&times;</span><div class="zt" id="zctitle"></div><div id="zcstats"></div></div>
+  <div class="sw-row">
+    <span>Show Zipcode Boundaries</span>
+    <div class="sw" id="bdsw" style="background:#065A82" onclick="toggleBD()"><div class="dot" id="bddot" style="left:20px"></div></div>
+  </div>
+  <hr class="dv">
+  <h3>Filters</h3>
+  <div class="fg"><label>Price range</label><div class="phist" id="phist" aria-hidden="true"></div><div class="prow"><span class="pin"><b>$</b><input type="text" id="fbmin" inputmode="numeric" placeholder="No min" aria-label="Minimum price"></span><span>&ndash;</span><span class="pin"><b>$</b><input type="text" id="fb" inputmode="numeric" placeholder="No max" aria-label="Maximum price"></span></div></div>
+  <div class="fg"><label>Bedrooms</label><select id="fbed"><option value="0" selected>Any</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5+</option></select></div>
+  <div class="fsub">More filters</div>
+  <div class="fgrid">
+  <div class="fg"><label>Bathrooms</label><select id="fba"><option value="0">Any</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option></select></div>
+  <div class="fg"><label>Min Grade</label><select id="fg"><option value="1" selected>Any</option><option value="5">5+</option><option value="6">6+</option><option value="7">7+ (Average)</option><option value="8">8+ (Above Avg)</option><option value="9">9+ (High)</option></select></div>
+  <div class="fg wide"><label>Square feet</label><div class="prow"><input type="text" id="fsmin" inputmode="numeric" placeholder="No min" aria-label="Minimum square feet"><span>&ndash;</span><input type="text" id="fsmax" inputmode="numeric" placeholder="No max" aria-label="Maximum square feet"></div></div>
+  <div class="fg wide"><label>Home age (years)</label><div class="prow"><input type="text" id="famin" inputmode="numeric" placeholder="No min" aria-label="Minimum age"><span>&ndash;</span><input type="text" id="famax" inputmode="numeric" placeholder="No max" aria-label="Maximum age"></div></div>
+  <div class="fg"><label>View Rating</label><select id="fv"><option value="0">Any</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4 (Excellent)</option></select></div>
+  <div class="fg"><label>Condition</label><select id="fc"><option value="1">Any</option><option value="3">3+ (Average)</option><option value="4">4+ (Good)</option><option value="5">5 (Very Good)</option></select></div>
+  <div class="fg"><label>Floors</label><select id="ff"><option value="0">Any</option><option value="1">1</option><option value="1.5">1.5+</option><option value="2">2+</option><option value="3">3+</option></select></div>
+  <div class="fg"><label>Renovation</label><select id="fr"><option value="any">Any</option><option value="1">Renovated</option><option value="0">Non-Renovated</option></select></div>
+  <div class="fg"><label>Waterfront</label><select id="fw"><option value="any">Any</option><option value="1">Waterfront</option><option value="0">No Waterfront</option></select></div>
+  </div>
+  <div class="fcount"><b id="sf">0</b> homes match your filters</div>
+  <div class="btnrow">
+    <button class="btn bp" id="fapply" onclick="applyF()">Apply filters</button>
+    <button class="btn bo" onclick="resetF()">Reset All</button>
+  </div>
+  <hr class="dv">
+  <h3>View Mode</h3>
+  <div class="tog"><div class="tb ac" id="ma" onclick="setM('all')">All Homes</div><div class="tb" id="md" onclick="setM('deals')">Undervalued Homes</div></div>
+  <div class="di" id="dinfo"><b>Possibly undervalued</b><br>These sold for less than the model predicted. That is a reason to look closer, not proof of a bargain &mdash; see <b>?</b> on the map for what the model can and cannot see.</div>
+  </div>
+<div id="map"></div>
+<div id="ov" onclick="if(event.target===this)closeAbout()">
+  <div id="ab" role="dialog" aria-modal="true" aria-labelledby="abt">
+    <button id="abx" onclick="closeAbout()" aria-label="Close">&times;</button>
+    <h2 id="abt">About this map</h2>
+    <h3>What is on this map?</h3>
+    <p>Every home sale recorded in King County, Washington between May 2014 and May 2015 &mdash; 21,612 sales, from the public Kaggle dataset &ldquo;House Sales in King County, USA&rdquo;. It does <b>not</b> include homes currently for sale, rentals, anything built or sold since 2015, or any street address or photo. Each sale appears only as a point.</p>
+    <h3>What does &ldquo;possibly undervalued&rdquo; mean?</h3>
+    <p>A linear regression model predicts what each home <i>should</i> have sold for, from its size, grade, age, location and similar features. A sale is marked possibly undervalued when the price actually paid came in below that prediction. Only sales at $500,000 or less are included, and only ones held out of the model&rsquo;s training data, so the model had never seen them when it guessed &mdash; 1,473 sales in all.</p>
+    <h3>How far can I trust it?</h3>
+    <p>Not far on any single home. The model cannot see condition, finishes, lot problems, or who the buyer and seller were, and some of the largest gaps are simply its own mistakes: one sale here went for $472,000 against a prediction of $1.1&nbsp;million, which says more about the model than about the house. The comparison was built to look across this one dataset and should not be used outside that context. Treat a large gap as a reason to look closer, not as proof of a bargain.</p>
+    <p class="abf">Course project for INFO 5002, Northeastern University. Not financial or investment advice.</p>
+  </div>
+</div>
+<div id="rp">
+  <div id="rh"><div class="rnum" id="rn">&mdash;</div><div class="rlab" id="rl">homes in this view</div><div class="rsub" id="rs">Sold in King County, 2014&ndash;15.</div>
+  <select id="so" onchange="updList()"><option value="price-asc">Price: Low to High</option><option value="price-desc">Price: High to Low</option><option value="ppsf-asc">$/Sqft: Low to High</option><option value="ppsf-desc">$/Sqft: High to Low</option><option value="sqft-desc">Size: Large to Small</option><option value="grade-desc">Grade: High to Low</option></select></div>
+  <div id="hl"></div>
+</div>
+</div>
+<!-- Data lives beside this file. Loaded as classic scripts, not fetch(), so the page still works
+     when opened straight from disk (file:// blocks fetch, but allows <script src>). -->
+<script src="v5-sales.js"></script>
+<script src="v5-bounds.js"></script>
+<script>
+var ZD=R.z;
+var UV=R.u.map(function(h){return{lat:h.a,lng:h.b,price:h.p,sqft:h.s,beds:h.br,baths:h.ba,grade:h.g,zip:h.z,ppsf:h.ps,age:h.ag,reno:h.rv,cond:h.c,view:h.v,wf:h.wf,fl:h.fl,predicted:h.pp,diff:h.pd}});
+var AH=R.h.map(function(h){return{lat:h.a,lng:h.b,price:h.p,sqft:h.s,beds:h.br,baths:h.ba,grade:h.g,zip:h.z,ppsf:h.ps,age:h.ag,reno:h.rv,cond:h.c,view:h.v,wf:h.wf,fl:h.fl}});
+function G(n){return document.getElementById(n)}
+function fmt(n){return "$"+n.toLocaleString()}
+function fK(n){return n>=1e6?"$"+(n/1e6).toFixed(1)+"M":"$"+Math.round(n/1e3)+"K"}
+function gc(p){return p>=400?"#7F1D1D":p>=350?"#B91C1C":p>=300?"#DC2626":p>=250?"#F97316":p>=200?"#FBBF24":p>=175?"#A3E635":"#22C55E"}
+function toLL(c){if(typeof c[0]==="number")return[c[1],c[0]];return c.map(toLL)}
+
+var map=L.map("map").setView([47.5,-122.15],10);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",{attribution:"Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",maxZoom:17,maxNativeZoom:16}).addTo(map);
+
+var hm=L.layerGroup().addTo(map),dm=L.layerGroup(),zcL=L.layerGroup().addTo(map),bdL=L.layerGroup().addTo(map);
+var mode="all",filt=AH.slice(),uvFilt=UV.slice(),hiMark=null,zipHL=null,blinkT=null,bdOn=true;
+
+// Boundaries (dashed)
+var zipLayers={};
+var bdSt={color:"#94a3b8",weight:1.2,fillColor:"transparent",fillOpacity:0,dashArray:"5 4",interactive:false};
+Object.keys(BOUNDS).forEach(function(zc){
+  var geom=BOUNDS[zc],layer;
+  if(geom.type==="Polygon")layer=L.polygon(toLL(geom.coordinates),bdSt);
+  else if(geom.type==="MultiPolygon")layer=L.polygon(geom.coordinates.map(function(p){return toLL(p)}),bdSt);
+  if(layer){layer.addTo(bdL);zipLayers[zc]=layer}
+});
+
+function toggleBD(){
+  bdOn=!bdOn;G("bdsw").style.background=bdOn?"#065A82":"#cbd5e1";G("bddot").style.left=bdOn?"20px":"2px";
+  if(bdOn)bdL.addTo(map);else map.removeLayer(bdL);
+}
+
+// Zip circles
+ZD.forEach(function(d){
+  var c=L.circle([d.lat,d.lng],{radius:Math.max(Math.sqrt(d.count)*55,350),fillColor:gc(d.avg_ppsf),color:"#fff",weight:1.5,opacity:.9,fillOpacity:.65}).addTo(zcL);
+  c.bindTooltip("<b>"+d.zipcode+"</b><br>Avg: "+fmt(d.avg_price)+"<br>$/sqft: "+fmt(d.avg_ppsf)+"<br>Homes: "+d.count,{sticky:true});
+  L.marker([d.lat,d.lng],{icon:L.divIcon({className:"",html:'<div style="font-size:9px;font-weight:bold;color:#1B3A4B;text-align:center;text-shadow:0 0 3px white,0 0 3px white;">'+d.zipcode+'</div>',iconSize:[44,12],iconAnchor:[22,6]})}).addTo(zcL);
+});
+
+// Undervalued markers, redrawn whenever the filters change
+function drawUV(){
+  dm.clearLayers();
+  uvFilt.forEach(function(d){
+    L.circleMarker([d.lat,d.lng],{radius:5,fillColor:"#059669",color:"#fff",weight:1.5,fillOpacity:.85}).addTo(dm)
+    .bindPopup("<b style='color:#059669'>Possibly undervalued</b><br>Sold: <b>"+fmt(d.price)+"</b><br>Model predicted: "+fmt(d.predicted)+"<br>Below prediction by <b style='color:#059669'>"+fmt(Math.abs(d.diff))+"</b><br>"+d.beds+"bd / "+d.baths+"ba / "+d.sqft.toLocaleString()+" sqft<br>Grade "+d.grade+"/13 | Zip "+d.zip);
+  });
+}
+
+// Individual sales are drawn whenever few enough fit on screen to be read, at any zoom. The old rule
+// looked only at the zoom level, so a filter that left 8 homes showed them in the list and nothing
+// on the map, which reads as a broken filter.
+var hmHidden=false;
+function drawHM(){
+  hm.clearLayers();
+  var b=map.getBounds(),vis=[];
+  for(var i=0;i<filt.length&&vis.length<=2000;i++){var f=filt[i];if(b.contains([f.lat,f.lng]))vis.push(f)}
+  hmHidden=vis.length>2000&&map.getZoom()<12;
+  if(hmHidden)return;
+  var n=0;
+  vis.forEach(function(h){if(n>2000)return;if(true){
+    L.circleMarker([h.lat,h.lng],{radius:4,fillColor:gc(h.ppsf),color:"#fff",weight:1,fillOpacity:.8}).addTo(hm)
+    .bindPopup("<b>"+fmt(h.price)+"</b><br>"+h.beds+"bd / "+h.baths+"ba / "+h.sqft.toLocaleString()+" sqft<br>"+fmt(h.ppsf)+"/sqft | Grade "+h.grade+"/13<br>Zip "+h.zip+" | "+h.age+" yrs"+(h.reno?"<br><span style='color:#059669'>Renovated</span>":"")+(h.wf?"<br><span style='color:#065A82'>Waterfront</span>":""));n++}});
+}
+
+function hiLight(lat,lng){
+  if(hiMark){map.removeLayer(hiMark);hiMark=null}
+  if(blinkT){clearInterval(blinkT);blinkT=null}
+  hiMark=L.circleMarker([lat,lng],{radius:16,fillColor:"transparent",color:"#DC2626",weight:4,fillOpacity:0}).addTo(map);
+  var cnt=0;
+  blinkT=setInterval(function(){
+    if(!hiMark){clearInterval(blinkT);return}
+    hiMark.setStyle({opacity:cnt%2===0?0:1});cnt++;
+    if(cnt>6){hiMark.setStyle({opacity:1});clearInterval(blinkT)}
+  },250);
+}
+
+// Zipcode search
+G("zi").addEventListener("input",function(){
+  var v=this.value.trim();
+  if(v.length<2){G("zdd").style.display="none";return}
+  var m=ZD.filter(function(z){return String(z.zipcode).indexOf(v)>=0}).slice(0,10);
+  if(!m.length){G("zdd").style.display="none";return}
+  G("zdd").innerHTML=m.map(function(z){return'<div class="zi" onclick="selZip('+z.zipcode+')"><span class="zn">'+z.zipcode+'</span><span class="zp">'+fmt(z.avg_ppsf)+'/sqft - '+z.count+' homes</span></div>'}).join("");
+  G("zdd").style.display="block";
+});
+G("zi").addEventListener("blur",function(){setTimeout(function(){G("zdd").style.display="none"},200)});
+
+function selZip(code){
+  G("zdd").style.display="none";G("zi").value=code;
+  var z=ZD.find(function(d){return d.zipcode===code});if(!z)return;
+  G("zctitle").textContent="Zipcode "+code;
+  G("zcstats").innerHTML='<div class="zs">Avg Price: <b>'+fmt(z.avg_price)+'</b></div><div class="zs">Median: <b>'+fmt(z.median_price)+'</b></div><div class="zs">$/sqft: <b>'+fmt(z.avg_ppsf)+'</b></div><div class="zs">Avg Size: <b>'+z.avg_sqft.toLocaleString()+' sqft</b></div><div class="zs">Homes: <b>'+z.count+'</b></div>';
+  G("zcard").style.display="block";
+  if(zipHL){zipHL.setStyle({color:"#94a3b8",weight:1.2,fillColor:"transparent",fillOpacity:0,dashArray:"5 4"});zipHL=null}
+  var layer=zipLayers[String(code)];
+  if(layer){layer.setStyle({color:"#065A82",weight:3,fillColor:"#065A82",fillOpacity:.1,dashArray:""});zipHL=layer;map.fitBounds(layer.getBounds().pad(0.05))}
+  else{map.setView([z.lat,z.lng],13)}
+}
+function clearZip(){
+  G("zi").value="";G("zcard").style.display="none";
+  if(zipHL){zipHL.setStyle({color:"#94a3b8",weight:1.2,fillColor:"transparent",fillOpacity:0,dashArray:"5 4"});zipHL=null}
+  map.setView([47.5,-122.15],10);
+}
+
+// Filters
+// One predicate, used by both modes: "filtered" has to mean the same thing everywhere.
+function pass(h,f){
+  if(f.bud!==null&&h.price>f.bud)return false;
+  if(f.budMin!==null&&h.price<f.budMin)return false;
+  if(h.beds<f.bed||h.baths<f.ba||h.grade<f.g)return false;
+  if(f.sMin!==null&&h.sqft<f.sMin)return false;
+  if(f.sMax!==null&&h.sqft>f.sMax)return false;
+  if(f.aMin!==null&&h.age<f.aMin)return false;
+  if(f.aMax!==null&&h.age>f.aMax)return false;
+  if(h.view<f.v||h.cond<f.c)return false;
+  if(f.fl>0&&h.fl<f.fl)return false;
+  if(f.r==="1"&&!h.reno)return false;if(f.r==="0"&&h.reno)return false;
+  if(f.w==="1"&&!h.wf)return false;if(f.w==="0"&&h.wf)return false;
+  return true;
+}
+function applyF(){
+  var f={bud:priceHi(),budMin:priceLo(),bed:+G("fbed").value,ba:+G("fba").value,g:+G("fg").value,sMin:parsePrice(G("fsmin").value),sMax:parsePrice(G("fsmax").value),aMin:parsePrice(G("famin").value),aMax:parsePrice(G("famax").value),v:+G("fv").value,c:+G("fc").value,fl:+G("ff").value,r:G("fr").value,w:G("fw").value};
+  filt=AH.filter(function(h){return pass(h,f)});
+  uvFilt=UV.filter(function(h){return pass(h,f)});
+  G("sf").textContent=(mode==="deals"?uvFilt:filt).length.toLocaleString();
+  G("fapply").classList.remove("pending");
+  drawUV();drawHM();updList();
+}
+function resetF(){
+  G("fb").value="";G("fbmin").value="";G("fbed").value=0;G("fba").value=0;G("fg").value=1;G("fsmin").value="";G("fsmax").value="";G("famin").value="";G("famax").value="";G("fv").value=0;G("fc").value=1;G("ff").value=0;G("fr").value="any";G("fw").value="any";
+  updS();
+  // "Reset All" also drops the zipcode search and the map view. Resetting only the filters looks
+  // like a dead button whenever the filters were already at their defaults.
+  clearZip();
+  applyF();
+}
+// Zillow/Redfin 式的价格分布图：先看清房子都在哪个价位，再决定拖到哪
+var PH_LO=75000,PH_HI=2000000,PH_N=42,phBins=null;
+// Typed prices, Zillow style: blank means open-ended. "$300,000", "300k" and "1.2m" all work.
+function parsePrice(v){
+  v=String(v).trim().toLowerCase().replace(/[$,\s]/g,"");
+  if(!v)return null;
+  var m=v.match(/^(\d+(?:\.\d+)?)(k|m)?$/);
+  if(!m)return null;
+  var n=parseFloat(m[1]);
+  if(m[2]==="k")n*=1e3; else if(m[2]==="m")n*=1e6;
+  return Math.round(n);
+}
+function priceLo(){return parsePrice(G("fbmin").value)}
+function priceHi(){return parsePrice(G("fb").value)}
+// Swap rather than reject when the two are the wrong way round, then echo them back tidied up.
+function normPrice(){
+  var lo=priceLo(),hi=priceHi();
+  if(lo!==null&&hi!==null&&lo>hi){var t=lo;lo=hi;hi=t}
+  G("fbmin").value=lo===null?"":lo.toLocaleString();
+  G("fb").value=hi===null?"":hi.toLocaleString();
+  paintHist();
+}
+function buildHist(){
+  phBins=new Array(PH_N).fill(0);
+  var w=(PH_HI-PH_LO)/(PH_N-1);
+  AH.forEach(function(h){
+    var i=h.price>=PH_HI?PH_N-1:Math.floor((h.price-PH_LO)/w);
+    if(i<0)i=0; phBins[i]++;
+  });
+  var mx=Math.max.apply(null,phBins);
+  G("phist").innerHTML=phBins.map(function(c){
+    return '<i style="height:'+Math.max(1,Math.round(Math.sqrt(c/mx)*26))+'px"></i>';
+  }).join("");
+}
+function paintHist(){
+  if(!phBins)return;
+  var lo=priceLo(),hi=priceHi(),w=(PH_HI-PH_LO)/(PH_N-1),bars=G("phist").children;
+  if(lo===null)lo=-Infinity; if(hi===null)hi=Infinity;
+  for(var i=0;i<bars.length;i++){
+    var from=PH_LO+i*w,to=(i===PH_N-1)?Infinity:from+w;
+    bars[i].className=(to>lo&&from<=hi)?"on":"";
+  }
+}
+
+function updS(){
+  paintHist();
+}
+[["fsmin","fsmax"],["famin","famax"]].forEach(function(pair){
+  pair.forEach(function(id){
+    G(id).addEventListener("change",function(){
+      var lo=parsePrice(G(pair[0]).value),hi=parsePrice(G(pair[1]).value);
+      if(lo!==null&&hi!==null&&lo>hi){var t=lo;lo=hi;hi=t}
+      G(pair[0]).value=lo===null?"":lo.toLocaleString();
+      G(pair[1]).value=hi===null?"":hi.toLocaleString();
+    });
+    G(id).addEventListener("keydown",function(e){if(e.key==="Enter")applyF()});
+  });
+});
+["fbmin","fb"].forEach(function(id){
+  G(id).addEventListener("input",paintHist);
+  G(id).addEventListener("change",normPrice);
+  G(id).addEventListener("keydown",function(e){if(e.key==="Enter"){normPrice();applyF()}});
+});
+
+// Changing a filter does not apply it; the Apply button lights up until it is pressed, so you can set
+// several at once and nothing moves under you.
+function markPending(){G("fapply").classList.add("pending")}
+["fb","fbmin","fbed","fba","fg","fsmin","fsmax","famin","famax","fv","fc","ff","fr","fw"].forEach(function(id){G(id).addEventListener("change",markPending)});
+
+// Mode
+function setM(m){
+  mode=m;G("ma").classList.toggle("ac",m==="all");G("md").classList.toggle("ac",m==="deals");
+  G("dinfo").style.display=m==="deals"?"block":"none";
+  G("sf").textContent=(m==="deals"?uvFilt:filt).length.toLocaleString();
+  if(m==="deals"){map.removeLayer(hm);map.removeLayer(zcL);dm.addTo(map)}
+  else{map.removeLayer(dm);zcL.addTo(map);hm.addTo(map);drawHM()}
+  updList();
+}
+
+// List
+function updList(){
+  var b=map.getBounds(),sb=G("so").value;
+  var vis=mode==="deals"?uvFilt.filter(function(h){return b.contains([h.lat,h.lng])}):filt.filter(function(h){return b.contains([h.lat,h.lng])});
+  setHeadline(vis.length);
+  var parts=sb.split("-"),fd=parts[0],dr=parts[1],ml=dr==="asc"?1:-1;
+  var k=fd==="price"?"price":fd==="ppsf"?"ppsf":fd==="sqft"?"sqft":"grade";
+  vis.sort(function(a,b2){return(a[k]-b2[k])*ml});
+  var sh=vis.slice(0,100);
+  G("hl").innerHTML=sh.map(function(h){
+    var dl=h.diff?'<div class="hd">Save '+fmt(Math.abs(h.diff))+'</div>':"";
+    return'<div class="hc" onclick="ckCard('+h.lat+','+h.lng+',this)"><div class="hp">'+fmt(h.price)+dl+'</div><div class="ht">'+h.beds+'bd &middot; '+h.baths+'ba &middot; '+h.sqft.toLocaleString()+' sqft &middot; Grade '+h.grade+'/13</div><div class="hz">Zip '+h.zip+' &middot; '+fmt(h.ppsf)+'/sqft'+(h.reno?" &middot; Reno":"")+(h.wf?" &middot; WF":"")+'</div></div>'}).join("");
+}
+// One sentence saying what is in view, in the words of the question being asked.
+function setHeadline(n){
+  G("rn").textContent=n.toLocaleString();
+  if(mode==="deals"){
+    G("rl").textContent=n===1?"possibly undervalued home in this view":"possibly undervalued homes in this view";
+    G("rs").textContent=n?"Each sold for less than the model predicted for a similar home. Showing the first 100.":"None here. Try zooming out.";
+  }else{
+    G("rl").textContent=n===1?"home in this view":"homes in this view";
+    G("rs").textContent=!n?"Nothing matches here. Try zooming out or clearing a filter.":hmHidden?"Too many to plot individually at this zoom \u2014 the circles show each zipcode\u2019s average. Zoom in or narrow the filters to see single sales.":"Sold in King County, 2014\u201315. Switch to \u201cUndervalued Homes\u201d to see which sold below the model\u2019s estimate.";
+  }
+}
+
+function ckCard(lat,lng,el){
+  var cards=document.querySelectorAll(".hc");
+  for(var i=0;i<cards.length;i++)cards[i].classList.remove("sel");
+  el.classList.add("sel");
+  map.flyTo([lat,lng],16,{duration:.8});
+  setTimeout(function(){hiLight(lat,lng)},850);
+}
+
+// Help
+var help=L.control({position:"topright"});
+help.onAdd=function(){
+  var d=L.DomUtil.create("div","helpbtn");
+  d.innerHTML="?";d.title="About this map";d.setAttribute("role","button");d.setAttribute("tabindex","0");
+  L.DomEvent.disableClickPropagation(d);
+  d.onclick=openAbout;
+  d.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openAbout()}};
+  return d;
+};
+help.addTo(map);
+function openAbout(){G("ov").classList.add("on");G("abx").focus()}
+function closeAbout(){G("ov").classList.remove("on")}
+document.addEventListener("keydown",function(e){if(e.key==="Escape")closeAbout()});
+
+// Legend
+var leg=L.control({position:"bottomleft"});
+leg.onAdd=function(){var d=L.DomUtil.create("div","legend");d.innerHTML='<h4>Map Legend</h4><div class="lgs">Avg $/sqft by zipcode &mdash; green is cheaper</div><div><i style="background:#22C55E"></i>&lt;$175/sqft</div><div><i style="background:#FBBF24"></i>$200-249</div><div><i style="background:#DC2626"></i>$300+</div><div style="margin-top:4px;border-top:1px solid #e2e8f0;padding-top:4px"><i style="background:#059669;border-radius:50%"></i>Possibly undervalued</div><div><i style="border:3px solid #DC2626;background:transparent;border-radius:50%"></i>Selected</div><div><i style="border:1px dashed #94a3b8;background:transparent"></i>Zipcode boundary</div><div><i style="border:2px solid #065A82;background:rgba(6,90,130,.1)"></i>Searched zipcode</div>';return d};
+leg.addTo(map);
+
+map.on("moveend",function(){if(mode==="all")drawHM();updList()});
+buildHist();updS();applyF();
+</script>
+</body>
+</html>
